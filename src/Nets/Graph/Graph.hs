@@ -101,6 +101,11 @@ bfsStep m q ns x = S.foldr step (m, q) ns
     where step n p@(m', q') = if IM.member (to n) m then p
                             else (IM.insert (to n) x m', Q.enqueue (to n) q')
 
+hasPath :: [Int] -> Graph w -> Bool
+hasPath ns@(_:_:_) g = not $ null $ filter ((flip hasEdge) g) $ zip ns (drop 1 ns)
+hasPath [u] g = hasVertex u g
+hasPath [] _ = True
+
 -- Helper functions
 adjList :: Graph w -> AdjList w
 adjList (DGraph a) = a
