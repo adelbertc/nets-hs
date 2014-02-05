@@ -63,8 +63,8 @@ isDirected (DGraph _) = True
 isDirected (UGraph _) = False
 
 isUndirected :: Graph w -> Bool
-isUndirected (DGraph _) = True
-isUndirected (UGraph _) = False
+isUndirected (DGraph _) = False
+isUndirected (UGraph _) = True
 
 -- Helper functions
 adjList :: Graph w -> AdjList w
