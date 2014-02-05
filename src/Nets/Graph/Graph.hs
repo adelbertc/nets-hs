@@ -3,9 +3,9 @@ module Nets.Graph.Graph
         Graph
     ) where
 
-import qualified Control.Monad as M
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
+import qualified Data.Maybe as M
 import qualified Data.Set as S
 import Prelude hiding (reverse)
 
@@ -56,6 +56,24 @@ edges :: Graph w -> S.Set (Edge w)
 edges g = S.fromList $ filter predicate $ allEdges g
     where predicate = if isUndirected g then \_ -> True
                       else \e -> let (f, t) = endpoints e in f <= t
+
+getEdge :: (Int, Int) -> Graph w -> Maybe (Edge w)
+getEdge e@(u, v) g = do
+    a <- IM.lookup u $ adjList g
+    f <- return $ S.filter (\nbor -> endpoints nbor == e) a
+    if S.null f then Nothing else Just $ head (S.toList f)
+
+hasEdge :: (Int, Int) -> Graph w -> Bool
+hasEdge e g = M.isJust $ getEdge e g
+
+size :: Graph w -> Int
+size g = case g of
+            DGraph _ -> bothDirections
+            UGraph _ -> bothDirections `div` 2
+         where bothDirections = length $ allEdges g
+
+weightOf :: (Int, Int) -> Graph w -> Maybe w
+weightOf e g = fmap weight $ getEdge e g
 
 -- Graph functions
 isDirected :: Graph w -> Bool
