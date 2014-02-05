@@ -10,6 +10,7 @@ import qualified Data.Set as S
 import Prelude hiding (reverse)
 
 import Nets.Graph.Edge
+import qualified Nets.Util.Queue as Q
 
 type Nbors w = S.Set (Edge w)
 type AdjList w = IM.IntMap (Nbors w)
@@ -83,6 +84,22 @@ isDirected (UGraph _) = False
 isUndirected :: Graph w -> Bool
 isUndirected (DGraph _) = False
 isUndirected (UGraph _) = True
+
+bfs :: Int -> Graph w -> Maybe (IM.IntMap Int)
+bfs r g = bfsAux g (IM.singleton r 0) (Q.singleton r)
+
+bfsAux :: Graph w -> IM.IntMap Int -> Q.Queue Int -> Maybe (IM.IntMap Int)
+bfsAux g m q = if not $ Q.null q then recurse else Just m
+    where recurse = do (u, rest) <- Q.dequeue q
+                       length    <- IM.lookup u m
+                       nbors     <- neighbors u g
+                       let (m', q') =  bfsStep m rest nbors (length + 1)
+                       bfsAux g m' q'
+
+bfsStep :: IM.IntMap Int -> Q.Queue Int -> Nbors w -> Int -> (IM.IntMap Int, Q.Queue Int)
+bfsStep m q ns x = S.foldr step (m, q) ns
+    where step n p@(m', q') = if IM.member (to n) m then p
+                            else (IM.insert (to n) x m', Q.enqueue (to n) q')
 
 -- Helper functions
 adjList :: Graph w -> AdjList w
