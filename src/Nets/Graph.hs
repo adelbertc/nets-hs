@@ -1,4 +1,4 @@
-module Nets.Graph.Graph
+module Nets.Graph
     (
         Graph,
         addVertex,
@@ -34,8 +34,8 @@ import qualified Data.Monoid as Mo
 import qualified Data.Set as S
 import Prelude hiding (reverse)
 
-import Nets.Graph.Edge
-import Nets.Graph.Vertex
+import Nets.Edge
+import Nets.Vertex
 import qualified Nets.Util.Queue as Q
 
 type Nbors w = S.Set (Edge w)

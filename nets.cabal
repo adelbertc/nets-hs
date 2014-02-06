@@ -19,9 +19,9 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Nets,
-                       Nets.Graph.Edge,
-                       Nets.Graph.Graph,
-                       Nets.Graph.Vertex,
+                       Nets.Edge,
+                       Nets.Graph,
+                       Nets.Vertex,
                        Nets.Util.Queue
   -- other-modules:
   -- other-extensions:

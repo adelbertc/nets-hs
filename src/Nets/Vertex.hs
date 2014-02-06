@@ -1,4 +1,4 @@
-module Nets.Graph.Vertex where
+module Nets.Vertex where
 
 newtype Vertex = Vertex Int deriving (Eq, Ord, Show)
 

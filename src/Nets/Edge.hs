@@ -1,4 +1,4 @@
-module Nets.Graph.Edge
+module Nets.Edge
     (
         Edge,
         dest,
@@ -11,7 +11,7 @@ module Nets.Graph.Edge
 
 import Prelude hiding (reverse)
 
-import Nets.Graph.Vertex
+import Nets.Vertex
 
 data Edge w = Edge Vertex Vertex w deriving (Show)
 
