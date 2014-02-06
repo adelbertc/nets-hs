@@ -2,8 +2,8 @@ module Nets.Graph.Edge
     (
         Edge,
         edge,
-        from,
-        to,
+        src,
+        dest,
         weight,
         endpoints,
         reverse
@@ -15,14 +15,14 @@ import Nets.Graph.Vertex
 
 data Edge w = Edge Vertex Vertex w
 
-edge :: Vertex -> Vertex -> w -> Edge w
-edge = Edge
+edge :: Vertex -> Vertex -> w -> Maybe (Edge w)
+edge u v w = if u == v then Nothing else Just $ Edge u v w
 
-from :: Edge w -> Vertex
-from (Edge f _ _) = f
+src :: Edge w -> Vertex
+src (Edge f _ _) = f
 
-to :: Edge w -> Vertex
-to (Edge _ t _) = t
+dest :: Edge w -> Vertex
+dest (Edge _ t _) = t
 
 weight :: Edge w -> w
 weight (Edge _ _ w) = w
