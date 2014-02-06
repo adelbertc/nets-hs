@@ -33,8 +33,10 @@ module Nets.Graph
         fromEdgesUC,
         nullD,
         nullU,
-        writeAdjacencyList,
-        writeAdjacencyListW
+        writeAdjacencyListU,
+        writeAdjacencyListW,
+        writeEdgelistU,
+        writeEdgelistW
     ) where
 
 import Data.Functor ((<$>))
@@ -184,15 +186,17 @@ nullU :: Graph w
 nullU = UGraph IM.empty
 
 -- File IO
-writeAdjacencyList :: IO.FilePath -> Graph w -> IO ()
-writeAdjacencyList fp g = IO.writeFile fp s
-    where showEdgeU e = unwords [show (src e), show (dest e)]
-          s = ppAdj showEdgeU g
+writeAdjacencyListU :: IO.FilePath -> Graph w -> IO ()
+writeAdjacencyListU fp g = IO.writeFile fp $ ppAdj ppEdgeU g
 
 writeAdjacencyListW :: Show w => IO.FilePath -> Graph w -> IO ()
-writeAdjacencyListW fp g = IO.writeFile fp s
-    where showEdge e = unwords [show (src e), show (dest e), show (weight e)]
-          s = ppAdj showEdge g
+writeAdjacencyListW fp g = IO.writeFile fp $ ppAdj ppEdgeW g
+
+writeEdgelistU :: IO.FilePath -> Graph w -> IO ()
+writeEdgelistU fp g = IO.writeFile fp $ ppEdgeList ppEdgeU g
+
+writeEdgelistW :: Show w => IO.FilePath -> Graph w -> IO ()
+writeEdgelistW fp g = IO.writeFile fp $ ppEdgeList ppEdgeW g
 
 -- Helper functions
 adjList :: Graph w -> AdjList w
@@ -222,6 +226,15 @@ pathToEdges vs = zip vs (drop 1 vs)
 ppAdj :: (Edge w -> String) -> Graph w -> String
 ppAdj f g = unlines $ fmap pp $ IM.toList $ adjList g
     where pp (u, nbors) = show u ++ " " ++ ppNbor f (S.toList nbors)
+
+ppEdgeList :: (Edge w -> String) -> Graph w -> String
+ppEdgeList f g = unlines $ fmap f $ S.toList $ edges g
+
+ppEdgeU :: Edge w -> String
+ppEdgeU e = show (src e) ++ " " ++ show (dest e)
+
+ppEdgeW :: Show w => Edge w -> String
+ppEdgeW e = show (src e) ++ " " ++ show (dest e) ++ show (weight e)
 
 ppNbor :: (Edge w -> String) -> [Edge w] -> String
 ppNbor f es = unwords $ fmap f es
