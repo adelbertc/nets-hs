@@ -33,12 +33,15 @@ module Nets.Graph
         fromEdgesUC,
         nullD,
         nullU,
+        readAdjacencyListU,
+        readAdjacencyListW,
         writeAdjacencyListU,
         writeAdjacencyListW,
         writeEdgelistU,
         writeEdgelistW
     ) where
 
+import qualified Control.Applicative as A
 import Data.Functor ((<$>))
 import qualified Data.Foldable as F
 import qualified Data.IntMap as IM
@@ -48,6 +51,9 @@ import qualified Data.Monoid as Mo
 import qualified Data.Set as S
 import Prelude hiding (reverse)
 import qualified System.IO as IO
+
+import qualified Data.Attoparsec.ByteString.Char8 as Atto
+import qualified Data.ByteString.Char8 as C8
 
 import Nets.Edge
 import Nets.Vertex
@@ -186,6 +192,12 @@ nullU :: Graph w
 nullU = UGraph IM.empty
 
 -- File IO
+readAdjacencyListU :: IO.FilePath -> IO (Maybe (Graph Int))
+readAdjacencyListU = fmap (Atto.maybeResult . Atto.parse parseAdjU) . C8.readFile
+
+readAdjacencyListW :: IO.FilePath -> Atto.Parser w -> IO (Maybe (Graph w))
+readAdjacencyListW fp p = fmap (Atto.maybeResult . Atto.parse (parseAdjW p)) $ C8.readFile fp
+
 writeAdjacencyListU :: IO.FilePath -> Graph w -> IO ()
 writeAdjacencyListU fp g = IO.writeFile fp $ ppAdj ppEdgeU g
 
@@ -197,6 +209,35 @@ writeEdgelistU fp g = IO.writeFile fp $ ppEdgeList ppEdgeU g
 
 writeEdgelistW :: Show w => IO.FilePath -> Graph w -> IO ()
 writeEdgelistW fp g = IO.writeFile fp $ ppEdgeList ppEdgeW g
+
+-- Parsers for reading graph from file
+parseAdjU :: Atto.Parser (Graph Int)
+parseAdjU = (UGraph . IM.fromList) <$> Atto.many' parseAdjLU
+
+parseAdjW :: Atto.Parser w -> Atto.Parser (Graph w)
+parseAdjW p = (DGraph . IM.fromList) <$> Atto.many' (parseAdjLW p)
+
+parseAdjLU :: Atto.Parser (Int, Nbors Int)
+parseAdjLU = parseAdjLW (return 1)
+
+parseAdjLW :: Atto.Parser w -> Atto.Parser (Int, Nbors w)
+parseAdjLW p = do
+    u <- parseVertex
+    Atto.skipSpace
+    vs <- parseNbor p `Atto.sepBy` Atto.skipSpace
+    Atto.endOfLine
+    let es = mapM (uncurry (edge u)) vs
+    maybe A.empty (\es' -> return (value u, S.fromList es')) es
+
+parseNbor :: Atto.Parser w -> Atto.Parser (Vertex, w)
+parseNbor p = do
+    v <- parseVertex
+    Atto.skipSpace
+    w <- p
+    return (v, w)
+
+parseVertex :: Atto.Parser Vertex
+parseVertex = Vertex <$> (Atto.decimal :: Atto.Parser Int)
 
 -- Helper functions
 adjList :: Graph w -> AdjList w
