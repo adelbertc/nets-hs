@@ -27,10 +27,7 @@ module Nets.Graph
         emptyD,
         emptyU,
         fromEdgesD,
-        fromEdgesDSC,
-        fromEdgesDWC,
         fromEdgesU,
-        fromEdgesUC,
         nullD,
         nullU,
         readAdjacencyListU,
@@ -172,15 +169,6 @@ emptyU = foldr (flip addVertex) nullU
 
 fromEdgesD :: [Edge w] -> Graph w
 fromEdgesD = foldr (flip addEdge) nullD
-
-fromEdgesDSC :: [Edge w] -> Maybe (Graph w)
-fromEdgesDSC = F.find stronglyConnected . Just . fromEdgesD
-
-fromEdgesDWC :: [Edge w] -> Maybe (Graph w)
-fromEdgesDWC = F.find weaklyConnected . Just . fromEdgesD
-
-fromEdgesUC :: [Edge w] -> Maybe (Graph w)
-fromEdgesUC = F.find stronglyConnected . Just . fromEdgesU
 
 fromEdgesU :: [Edge w] -> Graph w
 fromEdgesU = foldr (flip addEdge) nullU
