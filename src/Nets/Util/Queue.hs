@@ -38,3 +38,6 @@ singleton x = Queue [x] []
 uncons :: [a] -> Maybe (a, [a])
 uncons [] = Nothing
 uncons (x:xs) = Just (x, xs)
+
+instance Eq a => Eq (Queue a) where
+    (Queue l r) == (Queue l' r') = (l ++ reverse r) == (l' ++ reverse r')

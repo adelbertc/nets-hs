@@ -40,7 +40,7 @@ import qualified Nets.Util.Queue as Q
 
 type Nbors w = S.Set (Edge w)
 type AdjList w = IM.IntMap (Nbors w)
-data Graph w = DGraph (AdjList w) | UGraph (AdjList w)
+data Graph w = DGraph (AdjList w) | UGraph (AdjList w) deriving (Eq)
 
 -- Vertex centric functions
 addVertex :: Graph w -> Vertex -> Graph w

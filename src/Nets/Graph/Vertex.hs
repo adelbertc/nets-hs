@@ -1,3 +1,6 @@
 module Nets.Graph.Vertex where
 
-newtype Vertex = Vertex { value :: Int } deriving (Eq, Ord)
+newtype Vertex = Vertex Int deriving (Eq, Ord, Show)
+
+value :: Vertex -> Int
+value (Vertex u) = u

@@ -13,7 +13,7 @@ import Prelude hiding (reverse)
 
 import Nets.Graph.Vertex
 
-data Edge w = Edge Vertex Vertex w
+data Edge w = Edge Vertex Vertex w deriving (Show)
 
 edge :: Vertex -> Vertex -> w -> Maybe (Edge w)
 edge u v w = if u == v then Nothing else Just $ Edge u v w
