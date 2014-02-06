@@ -14,22 +14,22 @@ import qualified Prelude as P
 
 data Queue a = Queue [a] [a]
 
+dequeue :: Queue a -> Maybe (a, Queue a)
+dequeue (Queue l r) = if P.null l then second else first
+    where first = fmap (\(x, xs) -> (x, Queue xs r)) $ uncons l
+          second = fmap (\(x, xs) -> (x, Queue xs [])) $ uncons (reverse r)
+
 empty :: Queue a
 empty = Queue [] []
+
+enqueue :: a -> Queue a -> Queue a
+enqueue x (Queue l r) = Queue l (x:r)
 
 length :: Queue a -> Int
 length (Queue l r) = P.length l + P.length r
 
 null :: Queue a -> Bool
 null (Queue l r) = P.null l && P.null r
-
-dequeue :: Queue a -> Maybe (a, Queue a)
-dequeue (Queue l r) = if P.null l then second else first
-    where first = fmap (\(x, xs) -> (x, Queue xs r)) $ uncons l
-          second = fmap (\(x, xs) -> (x, Queue xs [])) $ uncons (reverse r)
-
-enqueue :: a -> Queue a -> Queue a
-enqueue x (Queue l r) = Queue l (x:r)
 
 singleton :: a -> Queue a
 singleton x = Queue [x] []

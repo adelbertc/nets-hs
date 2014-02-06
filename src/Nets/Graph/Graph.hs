@@ -15,14 +15,14 @@ module Nets.Graph.Graph
         hasEdge,
         size,
         weightOf,
-        isDirected,
-        isUndirected,
         bfs,
-        hasPath,
         cost,
         directed,
-        undirected,
+        hasPath,
+        isDirected,
+        isUndirected,
         stronglyConnected,
+        undirected,
         weaklyConnected
     ) where
 
@@ -98,6 +98,26 @@ weightOf :: Graph w -> (Vertex, Vertex) -> Maybe w
 weightOf g e = fmap weight $ getEdge g e
 
 -- Graph functions
+bfs :: Graph w -> Vertex -> Maybe (DM.Map Vertex Int)
+bfs g r = bfsAux g (DM.singleton r 0) (Q.singleton r)
+
+cost :: Mo.Monoid w => Graph w -> [Vertex] -> Maybe w
+cost _ [] = Just Mo.mempty
+cost g l@[_] = if hasPath g l then Just Mo.mempty else Nothing
+cost g vs = if not $ hasPath g vs then Nothing
+            else fmap sumWeights $ mapM (g `getEdge`) (pathToEdges vs)
+    where sumWeights = F.fold . fmap weight
+
+directed :: Graph w -> Graph w
+directed g@(DGraph _) = g
+directed (UGraph a) = DGraph a
+
+hasPath :: Graph w -> [Vertex] -> Bool
+hasPath _ [] = True
+hasPath g [u] = hasVertex g u
+hasPath g vs = length (takeWhile (g `hasEdge`) edgePath) == length edgePath
+    where edgePath = pathToEdges vs
+
 isDirected :: Graph w -> Bool
 isDirected (DGraph _) = True
 isDirected (UGraph _) = False
@@ -106,8 +126,26 @@ isUndirected :: Graph w -> Bool
 isUndirected (DGraph _) = False
 isUndirected (UGraph _) = True
 
-bfs :: Graph w -> Vertex -> Maybe (DM.Map Vertex Int)
-bfs g r = bfsAux g (DM.singleton r 0) (Q.singleton r)
+stronglyConnected :: Graph w -> Bool
+stronglyConnected g = (length vs <= 1) || Ma.fromMaybe False bfsr
+    where vs = vertices g
+          bfsr = do r <- Ma.listToMaybe vs
+                    b <- bfs g r
+                    return $ DM.keysSet b == vertexSet g
+
+undirected :: Graph w -> Graph w
+undirected g@(UGraph _) = g
+undirected g@(DGraph a) = UGraph $ IM.unionWith S.union a $ IM.fromListWith S.union reversedEdges
+     where pairReverse e = (value $ dest e, S.singleton $ reverse e)
+           reversedEdges = fmap pairReverse $ S.toList $ edges g
+
+weaklyConnected :: Graph w -> Bool
+weaklyConnected = stronglyConnected . undirected
+
+-- Helper functions
+adjList :: Graph w -> AdjList w
+adjList (DGraph a) = a
+adjList (UGraph a) = a
 
 bfsAux :: Graph w -> DM.Map Vertex Int -> Q.Queue Vertex -> Maybe (DM.Map Vertex Int)
 bfsAux g m q = if not $ Q.null q then recurse else Just m
@@ -121,44 +159,6 @@ bfsStep :: DM.Map Vertex Int -> Q.Queue Vertex -> Nbors w -> Int -> (DM.Map Vert
 bfsStep m q ns x = S.foldr step (m, q) ns
     where step n p@(m', q') = if DM.member (dest n) m then p
                             else (DM.insert (dest n) x m', Q.enqueue (dest n) q')
-
-hasPath :: Graph w -> [Vertex] -> Bool
-hasPath _ [] = True
-hasPath g [u] = hasVertex g u
-hasPath g vs = length (takeWhile (g `hasEdge`) edgePath) == length edgePath
-    where edgePath = pathToEdges vs
-
-cost :: Mo.Monoid w => Graph w -> [Vertex] -> Maybe w
-cost _ [] = Just Mo.mempty
-cost g l@[_] = if hasPath g l then Just Mo.mempty else Nothing
-cost g vs = if not $ hasPath g vs then Nothing
-            else fmap sumWeights $ mapM (g `getEdge`) (pathToEdges vs)
-    where sumWeights = F.fold . fmap weight
-
-directed :: Graph w -> Graph w
-directed g@(DGraph _) = g
-directed (UGraph a) = DGraph a
-
-undirected :: Graph w -> Graph w
-undirected g@(UGraph _) = g
-undirected g@(DGraph a) = UGraph $ IM.unionWith S.union a $ IM.fromListWith S.union reversedEdges
-     where pairReverse e = (value $ dest e, S.singleton $ reverse e)
-           reversedEdges = fmap pairReverse $ S.toList $ edges g
-
-stronglyConnected :: Graph w -> Bool
-stronglyConnected g = (length vs <= 1) || Ma.fromMaybe False bfsr
-    where vs = vertices g
-          bfsr = do r <- Ma.listToMaybe vs
-                    b <- bfs g r
-                    return $ DM.keysSet b == vertexSet g
-
-weaklyConnected :: Graph w -> Bool
-weaklyConnected = stronglyConnected . undirected
-
--- Helper functions
-adjList :: Graph w -> AdjList w
-adjList (DGraph a) = a
-adjList (UGraph a) = a
 
 mapAdj :: (AdjList w -> AdjList w) -> Graph w -> Graph w
 mapAdj f (DGraph a) = DGraph $ f a
