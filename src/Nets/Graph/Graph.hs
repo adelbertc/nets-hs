@@ -1,10 +1,27 @@
 module Nets.Graph.Graph
     (
-        Graph
+        Graph,
+        addVertex,
+        addVertexIfMissing,
+        degree,
+        hasVertex,
+        neighbors,
+        order,
+        vertexSet,
+        vertices,
+        addEdge,
+        edges,
+        getEdge,
+        hasEdge,
+        size,
+        weightOf,
+        isDirected,
+        isUndirected,
+        bfs,
+        hasPath
     ) where
 
 import qualified Data.IntMap as IM
-import qualified Data.IntSet as IS
 import qualified Data.Map as DM
 import qualified Data.Maybe as M
 import qualified Data.Set as S
@@ -20,11 +37,11 @@ data Graph w = DGraph (AdjList w) | UGraph (AdjList w)
 
 -- Vertex centric functions
 addVertex :: Vertex -> Graph w -> Graph w
-addVertex (Vertex u) g = mapAdj insertVertex g
-    where insertVertex = IM.insert u (S.empty)
+addVertex (Vertex u) = mapAdj insertVertex
+    where insertVertex = IM.insert u S.empty
 
 addVertexIfMissing :: Vertex -> Graph w -> Graph w
-addVertexIfMissing (Vertex u) g = mapAdj insertVertex g
+addVertexIfMissing (Vertex u) = mapAdj insertVertex
     where insertVertex a = IM.union a $ IM.singleton u S.empty
 
 degree :: Vertex -> Graph w -> Maybe Int
@@ -61,7 +78,7 @@ edges g = S.fromList $ filter predicate $ allEdges g
                       else \e -> let (f, t) = endpoints e in f <= t
 
 getEdge :: (Vertex, Vertex) -> Graph w -> Maybe (Edge w)
-getEdge e@(u, v) g = do
+getEdge e@(u, _) g = do
     a <- IM.lookup (value u) $ adjList g
     f <- return $ S.filter (\nbor -> endpoints nbor == e) a
     if S.null f then Nothing else Just $ head (S.toList f)
@@ -93,9 +110,9 @@ bfs r g = bfsAux g (DM.singleton r 0) (Q.singleton r)
 bfsAux :: Graph w -> DM.Map Vertex Int -> Q.Queue Vertex -> Maybe (DM.Map Vertex Int)
 bfsAux g m q = if not $ Q.null q then recurse else Just m
     where recurse = do (u, rest) <- Q.dequeue q
-                       length    <- DM.lookup u m
+                       pathLen   <- DM.lookup u m
                        nbors     <- neighbors u g
-                       let (m', q') =  bfsStep m rest nbors (length + 1)
+                       let (m', q') =  bfsStep m rest nbors (pathLen + 1)
                        bfsAux g m' q'
 
 bfsStep :: DM.Map Vertex Int -> Q.Queue Vertex -> Nbors w -> Int -> (DM.Map Vertex Int, Q.Queue Vertex)
@@ -104,7 +121,8 @@ bfsStep m q ns x = S.foldr step (m, q) ns
                             else (DM.insert (to n) x m', Q.enqueue (to n) q')
 
 hasPath :: [Vertex] -> Graph w -> Bool
-hasPath ns@(_:_:_) g = not $ null $ filter ((flip hasEdge) g) $ zip ns (drop 1 ns)
+hasPath ns@(_:_:_) g = length (takeWhile (`hasEdge` g) edgePath) == length edgePath
+    where edgePath = zip ns (drop 1 ns)
 hasPath [u] g = hasVertex u g
 hasPath [] _ = True
 
