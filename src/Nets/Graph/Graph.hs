@@ -104,8 +104,8 @@ isUndirected :: Graph w -> Bool
 isUndirected (DGraph _) = False
 isUndirected (UGraph _) = True
 
-bfs :: Vertex -> Graph w -> Maybe (DM.Map Vertex Int)
-bfs r g = bfsAux g (DM.singleton r 0) (Q.singleton r)
+bfs :: Graph w -> Vertex -> Maybe (DM.Map Vertex Int)
+bfs g r = bfsAux g (DM.singleton r 0) (Q.singleton r)
 
 bfsAux :: Graph w -> DM.Map Vertex Int -> Q.Queue Vertex -> Maybe (DM.Map Vertex Int)
 bfsAux g m q = if not $ Q.null q then recurse else Just m
@@ -120,11 +120,11 @@ bfsStep m q ns x = S.foldr step (m, q) ns
     where step n p@(m', q') = if DM.member (to n) m then p
                             else (DM.insert (to n) x m', Q.enqueue (to n) q')
 
-hasPath :: [Vertex] -> Graph w -> Bool
-hasPath ns@(_:_:_) g = length (takeWhile (g `hasEdge`) edgePath) == length edgePath
+hasPath :: Graph w -> [Vertex] -> Bool
+hasPath g ns@(_:_:_) = length (takeWhile (g `hasEdge`) edgePath) == length edgePath
     where edgePath = zip ns (drop 1 ns)
-hasPath [u] g = hasVertex g u
-hasPath [] _ = True
+hasPath g [u] = hasVertex g u
+hasPath _ [] = True
 
 -- Helper functions
 adjList :: Graph w -> AdjList w
