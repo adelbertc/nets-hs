@@ -74,13 +74,13 @@ addEdge g e = mapAdj insertEdge g
 
 edges :: Graph w -> S.Set (Edge w)
 edges g = S.fromList $ filter predicate $ allEdges g
-    where predicate = if isUndirected g then \_ -> True
+    where predicate = if isUndirected g then const True
                       else \e -> let (f, t) = endpoints e in f <= t
 
 getEdge :: Graph w -> (Vertex, Vertex) -> Maybe (Edge w)
 getEdge g e@(u, _) = do
     a <- IM.lookup (value u) $ adjList g
-    f <- return $ S.filter (\nbor -> endpoints nbor == e) a
+    let f = S.filter (\nbor -> endpoints nbor == e) a
     if S.null f then Nothing else Just $ head (S.toList f)
 
 hasEdge :: Graph w -> (Vertex, Vertex) -> Bool
