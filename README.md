@@ -18,5 +18,15 @@ random walks.
   endpoints, not the weight. Seems a bit hack-y, I don't
   really like it.. need to think of a better way.
 
+## Ideas
+Once the basic graph functionality is solidified, there's a
+bunch of cool things I'd like to try:
+
+* Synthetic graph generation (complete graphs, Barabasi-Albert, etc.)
+* Visualization (via [graphviz](http://projects.haskell.org/graphviz/) ?)
+* Linear algebra/spectral graph theory stuff (adjacency matrix,
+  laplacian, etc.)
+* JSON Serialization
+
 ## License
 Please see LICENSE for licensing details.
