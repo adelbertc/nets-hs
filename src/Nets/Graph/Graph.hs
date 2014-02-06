@@ -36,22 +36,22 @@ type AdjList w = IM.IntMap (Nbors w)
 data Graph w = DGraph (AdjList w) | UGraph (AdjList w)
 
 -- Vertex centric functions
-addVertex :: Vertex -> Graph w -> Graph w
-addVertex (Vertex u) = mapAdj insertVertex
+addVertex :: Graph w -> Vertex -> Graph w
+addVertex g (Vertex u) = mapAdj insertVertex g
     where insertVertex = IM.insert u S.empty
 
-addVertexIfMissing :: Vertex -> Graph w -> Graph w
-addVertexIfMissing (Vertex u) = mapAdj insertVertex
+addVertexIfMissing :: Graph w -> Vertex -> Graph w
+addVertexIfMissing g (Vertex u) = mapAdj insertVertex g
     where insertVertex a = IM.union a $ IM.singleton u S.empty
 
-degree :: Vertex -> Graph w -> Maybe Int
-degree (Vertex u) g = fmap S.size $ IM.lookup u (adjList g)
+degree :: Graph w -> Vertex -> Maybe Int
+degree g (Vertex u) = fmap S.size $ IM.lookup u (adjList g)
 
-hasVertex :: Vertex -> Graph w -> Bool
-hasVertex (Vertex u) g = IM.member u (adjList g)
+hasVertex :: Graph w -> Vertex -> Bool
+hasVertex g (Vertex u) = IM.member u (adjList g)
 
-neighbors :: Vertex -> Graph w -> Maybe (Nbors w)
-neighbors (Vertex u) g = IM.lookup u (adjList g)
+neighbors :: Graph w -> Vertex -> Maybe (Nbors w)
+neighbors g (Vertex u) = IM.lookup u (adjList g)
 
 order :: Graph w -> Int
 order = IM.size . adjList
@@ -63,8 +63,8 @@ vertices :: Graph w -> [Vertex]
 vertices = fmap Vertex . IM.keys . adjList
 
 -- Edge centric functions
-addEdge :: Edge w -> Graph w -> Graph w
-addEdge e g = mapAdj insertEdge g
+addEdge :: Graph w -> Edge w -> Graph w
+addEdge g e = mapAdj insertEdge g
     where oneWay = IM.singleton (value $ from e) (S.singleton e)
 
           toInsert = if isUndirected g then IM.insert (value $ to e) (S.singleton (reverse e)) oneWay
@@ -77,14 +77,14 @@ edges g = S.fromList $ filter predicate $ allEdges g
     where predicate = if isUndirected g then \_ -> True
                       else \e -> let (f, t) = endpoints e in f <= t
 
-getEdge :: (Vertex, Vertex) -> Graph w -> Maybe (Edge w)
-getEdge e@(u, _) g = do
+getEdge :: Graph w -> (Vertex, Vertex) -> Maybe (Edge w)
+getEdge g e@(u, _) = do
     a <- IM.lookup (value u) $ adjList g
     f <- return $ S.filter (\nbor -> endpoints nbor == e) a
     if S.null f then Nothing else Just $ head (S.toList f)
 
-hasEdge :: (Vertex, Vertex) -> Graph w -> Bool
-hasEdge e g = M.isJust $ getEdge e g
+hasEdge :: Graph w -> (Vertex, Vertex) -> Bool
+hasEdge g e = M.isJust $ getEdge g e
 
 size :: Graph w -> Int
 size g = case g of
@@ -92,8 +92,8 @@ size g = case g of
             UGraph _ -> bothDirections `div` 2
          where bothDirections = length $ allEdges g
 
-weightOf :: (Vertex, Vertex) -> Graph w -> Maybe w
-weightOf e g = fmap weight $ getEdge e g
+weightOf :: Graph w -> (Vertex, Vertex) -> Maybe w
+weightOf g e = fmap weight $ getEdge g e
 
 -- Graph functions
 isDirected :: Graph w -> Bool
@@ -111,7 +111,7 @@ bfsAux :: Graph w -> DM.Map Vertex Int -> Q.Queue Vertex -> Maybe (DM.Map Vertex
 bfsAux g m q = if not $ Q.null q then recurse else Just m
     where recurse = do (u, rest) <- Q.dequeue q
                        pathLen   <- DM.lookup u m
-                       nbors     <- neighbors u g
+                       nbors     <- neighbors g u
                        let (m', q') =  bfsStep m rest nbors (pathLen + 1)
                        bfsAux g m' q'
 
@@ -121,9 +121,9 @@ bfsStep m q ns x = S.foldr step (m, q) ns
                             else (DM.insert (to n) x m', Q.enqueue (to n) q')
 
 hasPath :: [Vertex] -> Graph w -> Bool
-hasPath ns@(_:_:_) g = length (takeWhile (`hasEdge` g) edgePath) == length edgePath
+hasPath ns@(_:_:_) g = length (takeWhile (g `hasEdge`) edgePath) == length edgePath
     where edgePath = zip ns (drop 1 ns)
-hasPath [u] g = hasVertex u g
+hasPath [u] g = hasVertex g u
 hasPath [] _ = True
 
 -- Helper functions
