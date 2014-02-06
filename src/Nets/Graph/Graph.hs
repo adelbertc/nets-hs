@@ -18,12 +18,15 @@ module Nets.Graph.Graph
         isDirected,
         isUndirected,
         bfs,
-        hasPath
+        hasPath,
+        cost
     ) where
 
+import qualified Data.Foldable as F
 import qualified Data.IntMap as IM
 import qualified Data.Map as DM
-import qualified Data.Maybe as M
+import qualified Data.Maybe as Ma
+import qualified Data.Monoid as Mo
 import qualified Data.Set as S
 import Prelude hiding (reverse)
 
@@ -84,7 +87,7 @@ getEdge g e@(u, _) = do
     if S.null f then Nothing else Just $ head (S.toList f)
 
 hasEdge :: Graph w -> (Vertex, Vertex) -> Bool
-hasEdge g e = M.isJust $ getEdge g e
+hasEdge g e = Ma.isJust $ getEdge g e
 
 size :: Graph w -> Int
 size g = case g of
@@ -121,10 +124,17 @@ bfsStep m q ns x = S.foldr step (m, q) ns
                             else (DM.insert (to n) x m', Q.enqueue (to n) q')
 
 hasPath :: Graph w -> [Vertex] -> Bool
-hasPath g ns@(_:_:_) = length (takeWhile (g `hasEdge`) edgePath) == length edgePath
-    where edgePath = zip ns (drop 1 ns)
-hasPath g [u] = hasVertex g u
 hasPath _ [] = True
+hasPath g [u] = hasVertex g u
+hasPath g vs = length (takeWhile (g `hasEdge`) edgePath) == length edgePath
+    where edgePath = pathToEdges vs
+
+cost :: Mo.Monoid w => Graph w -> [Vertex] -> Maybe w
+cost _ [] = Just Mo.mempty
+cost g l@[_] = if hasPath g l then Just Mo.mempty else Nothing
+cost g vs = if not $ hasPath g vs then Nothing
+            else fmap sumWeights $ mapM (g `getEdge`) (pathToEdges vs)
+    where sumWeights = F.fold . fmap weight
 
 -- Helper functions
 adjList :: Graph w -> AdjList w
@@ -137,3 +147,6 @@ allEdges g = IM.elems (adjList g) >>= S.toList
 mapAdj :: (AdjList w -> AdjList w) -> Graph w -> Graph w
 mapAdj f (DGraph a) = DGraph $ f a
 mapAdj f (UGraph a) = UGraph $ f a
+
+pathToEdges :: [Vertex] -> [(Vertex, Vertex)]
+pathToEdges vs = zip vs (drop 1 vs)
