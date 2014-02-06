@@ -23,9 +23,19 @@ module Nets.Graph
         isUndirected,
         stronglyConnected,
         undirected,
-        weaklyConnected
+        weaklyConnected,
+        emptyD,
+        emptyU,
+        fromEdgesD,
+        fromEdgesDSC,
+        fromEdgesDWC,
+        fromEdgesU,
+        fromEdgesUC,
+        nullD,
+        nullU
     ) where
 
+import Data.Functor ((<$>))
 import qualified Data.Foldable as F
 import qualified Data.IntMap as IM
 import qualified Data.Map as DM
@@ -52,7 +62,7 @@ addVertexIfMissing g (Vertex u) = mapAdj insertVertex g
     where insertVertex a = IM.union a $ IM.singleton u S.empty
 
 degree :: Graph w -> Vertex -> Maybe Int
-degree g (Vertex u) = fmap S.size $ IM.lookup u (adjList g)
+degree g (Vertex u) = S.size <$> IM.lookup u (adjList g)
 
 hasVertex :: Graph w -> Vertex -> Bool
 hasVertex g (Vertex u) = IM.member u (adjList g)
@@ -95,7 +105,7 @@ size :: Graph w -> Int
 size = S.size . edges
 
 weightOf :: Graph w -> (Vertex, Vertex) -> Maybe w
-weightOf g e = fmap weight $ getEdge g e
+weightOf g e = weight <$> getEdge g e
 
 -- Graph functions
 bfs :: Graph w -> Vertex -> Maybe (DM.Map Vertex Int)
@@ -105,7 +115,7 @@ cost :: Mo.Monoid w => Graph w -> [Vertex] -> Maybe w
 cost _ [] = Just Mo.mempty
 cost g l@[_] = if hasPath g l then Just Mo.mempty else Nothing
 cost g vs = if not $ hasPath g vs then Nothing
-            else fmap sumWeights $ mapM (g `getEdge`) (pathToEdges vs)
+            else sumWeights <$> mapM (g `getEdge`) (pathToEdges vs)
     where sumWeights = F.fold . fmap weight
 
 directed :: Graph w -> Graph w
@@ -137,10 +147,38 @@ undirected :: Graph w -> Graph w
 undirected g@(UGraph _) = g
 undirected g@(DGraph a) = UGraph $ IM.unionWith S.union a $ IM.fromListWith S.union reversedEdges
      where pairReverse e = (value $ dest e, S.singleton $ reverse e)
-           reversedEdges = fmap pairReverse $ S.toList $ edges g
+           reversedEdges = pairReverse <$> S.toList (edges g)
 
 weaklyConnected :: Graph w -> Bool
 weaklyConnected = stronglyConnected . undirected
+
+-- Constructors
+emptyD :: [Vertex] -> Graph w
+emptyD = foldr (flip addVertex) nullD
+
+emptyU :: [Vertex] -> Graph w
+emptyU = foldr (flip addVertex) nullU
+
+fromEdgesD :: [Edge w] -> Graph w
+fromEdgesD = foldr (flip addEdge) nullD
+
+fromEdgesDSC :: [Edge w] -> Maybe (Graph w)
+fromEdgesDSC = F.find stronglyConnected . Just . fromEdgesD
+
+fromEdgesDWC :: [Edge w] -> Maybe (Graph w)
+fromEdgesDWC = F.find weaklyConnected . Just . fromEdgesD
+
+fromEdgesUC :: [Edge w] -> Maybe (Graph w)
+fromEdgesUC = F.find stronglyConnected . Just . fromEdgesU
+
+fromEdgesU :: [Edge w] -> Graph w
+fromEdgesU = foldr (flip addEdge) nullU
+
+nullD :: Graph w
+nullD = DGraph IM.empty
+
+nullU :: Graph w
+nullU = UGraph IM.empty
 
 -- Helper functions
 adjList :: Graph w -> AdjList w

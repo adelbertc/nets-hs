@@ -16,19 +16,19 @@ import Nets.Vertex
 data Edge w = Edge Vertex Vertex w deriving (Show)
 
 dest :: Edge w -> Vertex
-dest (Edge _ t _) = t
+dest (Edge _ d _) = d
 
 edge :: Vertex -> Vertex -> w -> Maybe (Edge w)
 edge u v w = if u == v then Nothing else Just $ Edge u v w
 
 endpoints :: Edge w -> (Vertex, Vertex)
-endpoints (Edge f t _) = (f, t)
+endpoints (Edge s d _) = (s, d)
 
 reverse :: Edge w -> Edge w
-reverse (Edge f t w) = Edge t f w
+reverse (Edge s d w) = Edge d s w
 
 src :: Edge w -> Vertex
-src (Edge f _ _) = f
+src (Edge s _ _) = s
 
 weight :: Edge w -> w
 weight (Edge _ _ w) = w
