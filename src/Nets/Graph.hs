@@ -15,7 +15,6 @@ module Nets.Graph
         hasEdge,
         size,
         weightOf,
-        bfs,
         cost,
         directed,
         hasPath,
@@ -42,7 +41,6 @@ import qualified Control.Applicative as A
 import Data.Functor ((<$>))
 import qualified Data.Foldable as F
 import qualified Data.IntMap as IM
-import qualified Data.Map as DM
 import qualified Data.Maybe as Ma
 import qualified Data.Monoid as Mo
 import qualified Data.Set as S
@@ -116,9 +114,6 @@ weightOf :: Graph w -> (Vertex, Vertex) -> Maybe w
 weightOf g e = weight <$> getEdge g e
 
 -- Graph functions
-bfs :: Graph w -> Vertex -> Maybe (DM.Map Vertex Int)
-bfs g r = bfsAux g (DM.singleton r 0) (Q.singleton r)
-
 cost :: Mo.Monoid w => Graph w -> [Vertex] -> Maybe w
 cost _ [] = Just Mo.mempty
 cost g l@[_] = if hasPath g l then Just Mo.mempty else Nothing
@@ -145,11 +140,11 @@ isUndirected (DGraph _) = False
 isUndirected (UGraph _) = True
 
 stronglyConnected :: Graph w -> Bool
-stronglyConnected g = (length vs <= 1) || Ma.fromMaybe False bfsr
+stronglyConnected g = (length vs <= 1) || Ma.fromMaybe False reached
     where vs = vertices g
-          bfsr = do r <- Ma.listToMaybe vs
-                    b <- bfs g r
-                    return $ DM.keysSet b == vertexSet g
+          reached = do r <- mapM (g `reachableFrom`) vs
+                       let r' = takeWhile (vertexSet g ==) r
+                       return $ length r' == order g
 
 undirected :: Graph w -> Graph w
 undirected g@(UGraph _) = g
@@ -232,18 +227,17 @@ adjList :: Graph w -> AdjList w
 adjList (DGraph a) = a
 adjList (UGraph a) = a
 
-bfsAux :: Graph w -> DM.Map Vertex Int -> Q.Queue Vertex -> Maybe (DM.Map Vertex Int)
-bfsAux g m q = if not $ Q.null q then recurse else Just m
+bfs :: Graph w -> S.Set Vertex -> Q.Queue Vertex -> Maybe (S.Set Vertex)
+bfs g s q = if not $ Q.null q then recurse else Just s
     where recurse = do (u, rest) <- Q.dequeue q
-                       pathLen   <- DM.lookup u m
                        nbors     <- neighbors g u
-                       let (m', q') =  bfsStep m rest nbors (pathLen + 1)
-                       bfsAux g m' q'
+                       let (s', q') =  bfsStep s rest nbors
+                       bfs g s' q'
 
-bfsStep :: DM.Map Vertex Int -> Q.Queue Vertex -> Nbors w -> Int -> (DM.Map Vertex Int, Q.Queue Vertex)
-bfsStep m q ns x = S.foldr step (m, q) ns
-    where step n p@(m', q') = if DM.member (dest n) m then p
-                            else (DM.insert (dest n) x m', Q.enqueue (dest n) q')
+bfsStep :: S.Set Vertex -> Q.Queue Vertex -> Nbors w -> (S.Set Vertex, Q.Queue Vertex)
+bfsStep s q = S.foldr step (s, q)
+    where step n p@(s', q') = if S.member (dest n) s then p
+                            else (S.insert (dest n) s', Q.enqueue (dest n) q')
 
 mapAdj :: (AdjList w -> AdjList w) -> Graph w -> Graph w
 mapAdj f (DGraph a) = DGraph $ f a
@@ -267,3 +261,6 @@ ppEdgeW e = show (src e) ++ " " ++ show (dest e) ++ show (weight e)
 
 ppNbor :: (Edge w -> String) -> [Edge w] -> String
 ppNbor f es = unwords $ fmap f es
+
+reachableFrom :: Graph w -> Vertex -> Maybe (S.Set Vertex)
+reachableFrom g r = bfs g (S.singleton r) (Q.singleton r)
