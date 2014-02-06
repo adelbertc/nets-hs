@@ -19,7 +19,9 @@ module Nets.Graph.Graph
         isUndirected,
         bfs,
         hasPath,
-        cost
+        cost,
+        directed,
+        undirected
     ) where
 
 import qualified Data.Foldable as F
@@ -135,6 +137,17 @@ cost g l@[_] = if hasPath g l then Just Mo.mempty else Nothing
 cost g vs = if not $ hasPath g vs then Nothing
             else fmap sumWeights $ mapM (g `getEdge`) (pathToEdges vs)
     where sumWeights = F.fold . fmap weight
+
+directed :: Graph w -> Graph w
+directed g@(DGraph _) = g
+directed (UGraph a) = DGraph a
+
+undirected :: Graph w -> Graph w
+undirected g@(UGraph _) = g
+undirected g@(DGraph a) = UGraph $ IM.unionWith S.union a $ IM.fromListWith S.union $ reverseEdges (allEdges g)
+    where pairReverse e = (value $ to e, S.singleton $ reverse e)
+
+          reverseEdges = fmap pairReverse
 
 -- Helper functions
 adjList :: Graph w -> AdjList w
