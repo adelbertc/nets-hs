@@ -11,21 +11,23 @@ module Nets.Graph.Edge
 
 import Prelude hiding (reverse)
 
-data Edge w = Edge Int Int w
+import Nets.Graph.Vertex
 
-edge :: Int -> Int -> w -> Edge w
+data Edge w = Edge Vertex Vertex w
+
+edge :: Vertex -> Vertex -> w -> Edge w
 edge = Edge
 
-from :: Edge w -> Int
+from :: Edge w -> Vertex
 from (Edge f _ _) = f
 
-to :: Edge w -> Int
+to :: Edge w -> Vertex
 to (Edge _ t _) = t
 
 weight :: Edge w -> w
 weight (Edge _ _ w) = w
 
-endpoints :: Edge w -> (Int, Int)
+endpoints :: Edge w -> (Vertex, Vertex)
 endpoints (Edge f t _) = (f, t)
 
 reverse :: Edge w -> Edge w

@@ -5,11 +5,13 @@ module Nets.Graph.Graph
 
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
+import qualified Data.Map as DM
 import qualified Data.Maybe as M
 import qualified Data.Set as S
 import Prelude hiding (reverse)
 
 import Nets.Graph.Edge
+import Nets.Graph.Vertex
 import qualified Nets.Util.Queue as Q
 
 type Nbors w = S.Set (Edge w)
@@ -17,38 +19,38 @@ type AdjList w = IM.IntMap (Nbors w)
 data Graph w = DGraph (AdjList w) | UGraph (AdjList w)
 
 -- Vertex centric functions
-addVertex :: Int -> Graph w -> Graph w
-addVertex u g = mapAdj insertVertex g
+addVertex :: Vertex -> Graph w -> Graph w
+addVertex (Vertex u) g = mapAdj insertVertex g
     where insertVertex = IM.insert u (S.empty)
 
-addVertexIfMissing :: Int -> Graph w -> Graph w
-addVertexIfMissing u g = mapAdj insertVertex g
+addVertexIfMissing :: Vertex -> Graph w -> Graph w
+addVertexIfMissing (Vertex u) g = mapAdj insertVertex g
     where insertVertex a = IM.union a $ IM.singleton u S.empty
 
-degree :: Int -> Graph w -> Maybe Int
-degree u g = fmap S.size $ IM.lookup u (adjList g)
+degree :: Vertex -> Graph w -> Maybe Int
+degree (Vertex u) g = fmap S.size $ IM.lookup u (adjList g)
 
-hasVertex :: Int -> Graph w -> Bool
-hasVertex u g = IM.member u (adjList g)
+hasVertex :: Vertex -> Graph w -> Bool
+hasVertex (Vertex u) g = IM.member u (adjList g)
 
-neighbors :: Int -> Graph w -> Maybe (Nbors w)
-neighbors u g = IM.lookup u (adjList g)
+neighbors :: Vertex -> Graph w -> Maybe (Nbors w)
+neighbors (Vertex u) g = IM.lookup u (adjList g)
 
 order :: Graph w -> Int
 order = IM.size . adjList
 
-vertexSet :: Graph w -> IS.IntSet
-vertexSet = IM.keysSet . adjList
+vertexSet :: Graph w -> S.Set Vertex
+vertexSet = S.fromList . vertices
 
-vertices :: Graph w -> [Int]
-vertices = IM.keys . adjList
+vertices :: Graph w -> [Vertex]
+vertices = fmap Vertex . IM.keys . adjList
 
 -- Edge centric functions
 addEdge :: Edge w -> Graph w -> Graph w
 addEdge e g = mapAdj insertEdge g
-    where oneWay = IM.singleton (from e) (S.singleton e)
+    where oneWay = IM.singleton (value $ from e) (S.singleton e)
 
-          toInsert = if isUndirected g then IM.insert (to e) (S.singleton (reverse e)) oneWay
+          toInsert = if isUndirected g then IM.insert (value $ to e) (S.singleton (reverse e)) oneWay
                      else oneWay
 
           insertEdge a = IM.unionWith S.union a toInsert
@@ -58,13 +60,13 @@ edges g = S.fromList $ filter predicate $ allEdges g
     where predicate = if isUndirected g then \_ -> True
                       else \e -> let (f, t) = endpoints e in f <= t
 
-getEdge :: (Int, Int) -> Graph w -> Maybe (Edge w)
+getEdge :: (Vertex, Vertex) -> Graph w -> Maybe (Edge w)
 getEdge e@(u, v) g = do
-    a <- IM.lookup u $ adjList g
+    a <- IM.lookup (value u) $ adjList g
     f <- return $ S.filter (\nbor -> endpoints nbor == e) a
     if S.null f then Nothing else Just $ head (S.toList f)
 
-hasEdge :: (Int, Int) -> Graph w -> Bool
+hasEdge :: (Vertex, Vertex) -> Graph w -> Bool
 hasEdge e g = M.isJust $ getEdge e g
 
 size :: Graph w -> Int
@@ -73,7 +75,7 @@ size g = case g of
             UGraph _ -> bothDirections `div` 2
          where bothDirections = length $ allEdges g
 
-weightOf :: (Int, Int) -> Graph w -> Maybe w
+weightOf :: (Vertex, Vertex) -> Graph w -> Maybe w
 weightOf e g = fmap weight $ getEdge e g
 
 -- Graph functions
@@ -85,23 +87,23 @@ isUndirected :: Graph w -> Bool
 isUndirected (DGraph _) = False
 isUndirected (UGraph _) = True
 
-bfs :: Int -> Graph w -> Maybe (IM.IntMap Int)
-bfs r g = bfsAux g (IM.singleton r 0) (Q.singleton r)
+bfs :: Vertex -> Graph w -> Maybe (DM.Map Vertex Int)
+bfs r g = bfsAux g (DM.singleton r 0) (Q.singleton r)
 
-bfsAux :: Graph w -> IM.IntMap Int -> Q.Queue Int -> Maybe (IM.IntMap Int)
+bfsAux :: Graph w -> DM.Map Vertex Int -> Q.Queue Vertex -> Maybe (DM.Map Vertex Int)
 bfsAux g m q = if not $ Q.null q then recurse else Just m
     where recurse = do (u, rest) <- Q.dequeue q
-                       length    <- IM.lookup u m
+                       length    <- DM.lookup u m
                        nbors     <- neighbors u g
                        let (m', q') =  bfsStep m rest nbors (length + 1)
                        bfsAux g m' q'
 
-bfsStep :: IM.IntMap Int -> Q.Queue Int -> Nbors w -> Int -> (IM.IntMap Int, Q.Queue Int)
+bfsStep :: DM.Map Vertex Int -> Q.Queue Vertex -> Nbors w -> Int -> (DM.Map Vertex Int, Q.Queue Vertex)
 bfsStep m q ns x = S.foldr step (m, q) ns
-    where step n p@(m', q') = if IM.member (to n) m then p
-                            else (IM.insert (to n) x m', Q.enqueue (to n) q')
+    where step n p@(m', q') = if DM.member (to n) m then p
+                            else (DM.insert (to n) x m', Q.enqueue (to n) q')
 
-hasPath :: [Int] -> Graph w -> Bool
+hasPath :: [Vertex] -> Graph w -> Bool
 hasPath ns@(_:_:_) g = not $ null $ filter ((flip hasEdge) g) $ zip ns (drop 1 ns)
 hasPath [u] g = hasVertex u g
 hasPath [] _ = True

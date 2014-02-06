@@ -20,11 +20,14 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Nets,
                        Nets.Graph.Edge,
-                       Nets.Graph.Graph
+                       Nets.Graph.Graph,
+                       Nets.Graph.Vertex,
+                       Nets.Util.Queue
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.6 && <4.7,
-                       containers >=0.5.4.0
+                       containers >=0.5.4.0,
+                       semigroups >= 0.12.2
   ghc-options:         -Wall
   hs-source-dirs:      src
   default-language:    Haskell2010
