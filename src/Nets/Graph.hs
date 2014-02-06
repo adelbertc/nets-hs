@@ -32,7 +32,9 @@ module Nets.Graph
         fromEdgesU,
         fromEdgesUC,
         nullD,
-        nullU
+        nullU,
+        writeAdjacencyList,
+        writeAdjacencyListW
     ) where
 
 import Data.Functor ((<$>))
@@ -43,6 +45,7 @@ import qualified Data.Maybe as Ma
 import qualified Data.Monoid as Mo
 import qualified Data.Set as S
 import Prelude hiding (reverse)
+import qualified System.IO as IO
 
 import Nets.Edge
 import Nets.Vertex
@@ -180,6 +183,17 @@ nullD = DGraph IM.empty
 nullU :: Graph w
 nullU = UGraph IM.empty
 
+-- File IO
+writeAdjacencyList :: IO.FilePath -> Graph w -> IO ()
+writeAdjacencyList fp g = IO.writeFile fp s
+    where showEdgeU e = unwords [show (src e), show (dest e)]
+          s = ppAdj showEdgeU g
+
+writeAdjacencyListW :: Show w => IO.FilePath -> Graph w -> IO ()
+writeAdjacencyListW fp g = IO.writeFile fp s
+    where showEdge e = unwords [show (src e), show (dest e), show (weight e)]
+          s = ppAdj showEdge g
+
 -- Helper functions
 adjList :: Graph w -> AdjList w
 adjList (DGraph a) = a
@@ -204,3 +218,10 @@ mapAdj f (UGraph a) = UGraph $ f a
 
 pathToEdges :: [Vertex] -> [(Vertex, Vertex)]
 pathToEdges vs = zip vs (drop 1 vs)
+
+ppAdj :: (Edge w -> String) -> Graph w -> String
+ppAdj f g = unlines $ fmap pp $ IM.toList $ adjList g
+    where pp (u, nbors) = show u ++ " " ++ ppNbor f (S.toList nbors)
+
+ppNbor :: (Edge w -> String) -> [Edge w] -> String
+ppNbor f es = unwords $ fmap f es
