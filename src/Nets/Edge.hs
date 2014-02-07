@@ -6,6 +6,7 @@ module Nets.Edge
         endpoints,
         reverse,
         src,
+        unweighted,
         weight
     ) where
 
@@ -29,6 +30,9 @@ reverse (Edge s d w) = Edge d s w
 
 src :: Edge w -> Vertex
 src (Edge s _ _) = s
+
+unweighted :: Vertex -> Vertex -> Maybe (Edge Int)
+unweighted u v = if u == v then Nothing else Just $ Edge u v 1
 
 weight :: Edge w -> w
 weight (Edge _ _ w) = w
