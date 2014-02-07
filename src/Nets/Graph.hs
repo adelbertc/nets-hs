@@ -17,6 +17,7 @@ module Nets.Graph
         weightOf,
         cost,
         directed,
+        directedness,
         hasPath,
         isDirected,
         isUndirected,
@@ -29,10 +30,10 @@ module Nets.Graph
         fromEdgesU,
         nullD,
         nullU,
-        readAdjacencyListDU,
-        readAdjacencyListDW,
-        readEdgeListDU,
-        readEdgeListDW,
+        readAdjacencyListU,
+        readAdjacencyListW,
+        readEdgeListU,
+        readEdgeListW,
         writeAdjacencyListU,
         writeAdjacencyListW,
         writeEdgelistU,
@@ -60,6 +61,8 @@ import qualified Nets.Util.Queue as Q
 type Nbors w = S.Set (Edge w)
 type AdjList w = IM.IntMap (Nbors w)
 data Graph w = DGraph (AdjList w) | UGraph (AdjList w) deriving (Eq)
+
+data Directedness = Directed | Undirected
 
 -- Vertex centric functions
 addVertex :: Graph w -> Vertex -> Graph w
@@ -128,6 +131,10 @@ directed :: Graph w -> Graph w
 directed g@(DGraph _) = g
 directed (UGraph a) = DGraph a
 
+directedness :: Graph w -> Directedness
+directedness (DGraph _) = Directed
+directedness (UGraph _) = Undirected
+
 hasPath :: Graph w -> [Vertex] -> Bool
 hasPath _ [] = True
 hasPath g [u] = hasVertex g u
@@ -178,29 +185,17 @@ nullU :: Graph w
 nullU = UGraph IM.empty
 
 -- File IO
-readAdjacencyListDU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
-readAdjacencyListDU = MaT.MaybeT . fmap (Atto.maybeResult . Atto.parse parseAdjListDU) . C8.readFile
+readAdjacencyListU :: IO.FilePath -> Directedness -> MaT.MaybeT IO (Graph Int)
+readAdjacencyListU fp d = parseGraph fp d parseAdjListDU
 
-readAdjacencyListUU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
-readAdjacencyListUU = fmap undirected . readAdjacencyListDU
+readAdjacencyListW :: IO.FilePath -> Directedness -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
+readAdjacencyListW fp d p = parseGraph fp d (parseAdjListDW p)
 
-readAdjacencyListDW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
-readAdjacencyListDW fp p = MaT.MaybeT $ fmap (Atto.maybeResult . Atto.parse (parseAdjListDW p)) $ C8.readFile fp
+readEdgeListU :: IO.FilePath -> Directedness -> MaT.MaybeT IO (Graph Int)
+readEdgeListU fp d = parseGraph fp d parseEdgeListDU
 
-readAdjacencyListUW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
-readAdjacencyListUW fp p = fmap undirected $ readAdjacencyListDW fp p
-
-readEdgeListDU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
-readEdgeListDU = MaT.MaybeT . fmap (Atto.maybeResult . Atto.parse parseEdgeListDU) . C8.readFile
-
-readEdgeListUU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
-readEdgeListUU = fmap undirected . readEdgeListDU
-
-readEdgeListDW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
-readEdgeListDW fp p = MaT.MaybeT $ fmap (Atto.maybeResult . Atto.parse (parseEdgeListDW p)) $ C8.readFile fp
-
-readEdgeListUW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
-readEdgeListUW fp p = fmap undirected $ readAdjacencyListDW fp p
+readEdgeListW :: IO.FilePath -> Directedness -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
+readEdgeListW fp d p = parseGraph fp d (parseEdgeListDW p)
 
 writeAdjacencyListU :: IO.FilePath -> Graph w -> IO ()
 writeAdjacencyListU fp g = IO.writeFile fp $ ppAdj ppEdgeU g
@@ -272,9 +267,16 @@ bfsStep s q = S.foldr step (s, q)
     where step n p@(s', q') = if S.member (dest n) s then p
                             else (S.insert (dest n) s', Q.enqueue (dest n) q')
 
+dirDispatch :: Directedness -> Graph w -> Graph w
+dirDispatch Directed = id
+dirDispatch Undirected = undirected
+
 mapAdj :: (AdjList w -> AdjList w) -> Graph w -> Graph w
 mapAdj f (DGraph a) = DGraph $ f a
 mapAdj f (UGraph a) = UGraph $ f a
+
+parseGraph :: FilePath -> Directedness -> Atto.Parser (Graph w) -> MaT.MaybeT IO (Graph w)
+parseGraph fp d p = dirDispatch d <$> MaT.MaybeT ((Atto.maybeResult . Atto.parse p) <$> C8.readFile fp)
 
 pathToEdges :: [Vertex] -> [(Vertex, Vertex)]
 pathToEdges vs = zip vs (drop 1 vs)
