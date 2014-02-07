@@ -29,8 +29,10 @@ module Nets.Graph
         fromEdgesU,
         nullD,
         nullU,
-        readAdjacencyListU,
-        readAdjacencyListW,
+        readAdjacencyListDU,
+        readAdjacencyListDW,
+        readEdgeListDU,
+        readEdgeListDW,
         writeAdjacencyListU,
         writeAdjacencyListW,
         writeEdgelistU,
@@ -176,11 +178,29 @@ nullU :: Graph w
 nullU = UGraph IM.empty
 
 -- File IO
-readAdjacencyListU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
-readAdjacencyListU = MaT.MaybeT . fmap (Atto.maybeResult . Atto.parse parseAdjU) . C8.readFile
+readAdjacencyListDU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
+readAdjacencyListDU = MaT.MaybeT . fmap (Atto.maybeResult . Atto.parse parseAdjListDU) . C8.readFile
 
-readAdjacencyListW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
-readAdjacencyListW fp p = MaT.MaybeT $ fmap (Atto.maybeResult . Atto.parse (parseAdjW p)) $ C8.readFile fp
+readAdjacencyListUU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
+readAdjacencyListUU = fmap undirected . readAdjacencyListDU
+
+readAdjacencyListDW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
+readAdjacencyListDW fp p = MaT.MaybeT $ fmap (Atto.maybeResult . Atto.parse (parseAdjListDW p)) $ C8.readFile fp
+
+readAdjacencyListUW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
+readAdjacencyListUW fp p = fmap undirected $ readAdjacencyListDW fp p
+
+readEdgeListDU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
+readEdgeListDU = MaT.MaybeT . fmap (Atto.maybeResult . Atto.parse parseEdgeListDU) . C8.readFile
+
+readEdgeListUU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
+readEdgeListUU = fmap undirected . readEdgeListDU
+
+readEdgeListDW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
+readEdgeListDW fp p = MaT.MaybeT $ fmap (Atto.maybeResult . Atto.parse (parseEdgeListDW p)) $ C8.readFile fp
+
+readEdgeListUW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
+readEdgeListUW fp p = fmap undirected $ readAdjacencyListDW fp p
 
 writeAdjacencyListU :: IO.FilePath -> Graph w -> IO ()
 writeAdjacencyListU fp g = IO.writeFile fp $ ppAdj ppEdgeU g
@@ -195,23 +215,35 @@ writeEdgelistW :: Show w => IO.FilePath -> Graph w -> IO ()
 writeEdgelistW fp g = IO.writeFile fp $ ppEdgeList ppEdgeW g
 
 -- Parsers for reading graph from file
-parseAdjU :: Atto.Parser (Graph Int)
-parseAdjU = (UGraph . IM.fromList) <$> Atto.many' parseAdjLU
+parseAdjListDU :: Atto.Parser (Graph Int)
+parseAdjListDU = (DGraph . IM.fromList) <$> Atto.many' (parseAdj $ return 1)
 
-parseAdjW :: Atto.Parser w -> Atto.Parser (Graph w)
-parseAdjW p = (DGraph . IM.fromList) <$> Atto.many' (parseAdjLW p)
+parseAdjListDW :: Atto.Parser w -> Atto.Parser (Graph w)
+parseAdjListDW p = (DGraph . IM.fromList) <$> Atto.many' (parseAdj p)
 
-parseAdjLU :: Atto.Parser (Int, Nbors Int)
-parseAdjLU = parseAdjLW (return 1)
-
-parseAdjLW :: Atto.Parser w -> Atto.Parser (Int, Nbors w)
-parseAdjLW p = do
+parseAdj :: Atto.Parser w -> Atto.Parser (Int, Nbors w)
+parseAdj p = do
     u <- parseVertex
     Atto.skipSpace
     vs <- parseNbor p `Atto.sepBy` Atto.skipSpace
     Atto.endOfLine
     let es = mapM (uncurry (edge u)) vs
     maybe A.empty (\es' -> return (value u, S.fromList es')) es
+
+parseEdge :: Atto.Parser w -> Atto.Parser (Edge w)
+parseEdge p = do
+    u <- parseVertex
+    Atto.skipSpace
+    (v, w) <- parseNbor p
+    Atto.endOfLine
+    let e = edge u v w
+    maybe A.empty return e
+
+parseEdgeListDU :: Atto.Parser (Graph Int)
+parseEdgeListDU = fromEdgesD <$> Atto.many' (parseEdge $ return 1)
+
+parseEdgeListDW :: Atto.Parser w -> Atto.Parser (Graph w)
+parseEdgeListDW = fmap fromEdgesD . Atto.many' . parseEdge
 
 parseNbor :: Atto.Parser w -> Atto.Parser (Vertex, w)
 parseNbor p = do
