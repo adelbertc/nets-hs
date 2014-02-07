@@ -24,12 +24,9 @@ module Nets.Graph
         stronglyConnected,
         undirected,
         weaklyConnected,
-        emptyD,
-        emptyU,
-        fromEdgesD,
-        fromEdgesU,
-        nullD,
-        nullU,
+        empty,
+        fromEdges,
+        null,
         readAdjacencyListU,
         readAdjacencyListW,
         readEdgeListU,
@@ -48,7 +45,7 @@ import qualified Data.IntMap as IM
 import qualified Data.Maybe as Ma
 import qualified Data.Monoid as Mo
 import qualified Data.Set as S
-import Prelude hiding (reverse)
+import Prelude hiding (reverse, null)
 import qualified System.IO as IO
 
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
@@ -166,36 +163,28 @@ weaklyConnected :: Graph w -> Bool
 weaklyConnected = stronglyConnected . undirected
 
 -- Constructors
-emptyD :: [Vertex] -> Graph w
-emptyD = foldr (flip addVertex) nullD
+empty :: Directedness -> [Vertex] -> Graph w
+empty d = foldr (flip addVertex) (null d)
 
-emptyU :: [Vertex] -> Graph w
-emptyU = foldr (flip addVertex) nullU
+null :: Directedness -> Graph w
+null Directed = DGraph IM.empty
+null Undirected = UGraph IM.empty
 
-fromEdgesD :: [Edge w] -> Graph w
-fromEdgesD = foldr (flip addEdge) nullD
-
-fromEdgesU :: [Edge w] -> Graph w
-fromEdgesU = foldr (flip addEdge) nullU
-
-nullD :: Graph w
-nullD = DGraph IM.empty
-
-nullU :: Graph w
-nullU = UGraph IM.empty
+fromEdges :: Directedness -> [Edge w] -> Graph w
+fromEdges d = foldr (flip addEdge) (null d)
 
 -- File IO
 readAdjacencyListU :: IO.FilePath -> Directedness -> MaT.MaybeT IO (Graph Int)
-readAdjacencyListU fp d = parseGraph fp d parseAdjListDU
+readAdjacencyListU fp d = parseGraph fp d parseAdjListU
 
 readAdjacencyListW :: IO.FilePath -> Directedness -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
-readAdjacencyListW fp d p = parseGraph fp d (parseAdjListDW p)
+readAdjacencyListW fp d p = parseGraph fp d (parseAdjListW p)
 
 readEdgeListU :: IO.FilePath -> Directedness -> MaT.MaybeT IO (Graph Int)
-readEdgeListU fp d = parseGraph fp d parseEdgeListDU
+readEdgeListU fp d = parseGraph fp d parseEdgeListU
 
 readEdgeListW :: IO.FilePath -> Directedness -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
-readEdgeListW fp d p = parseGraph fp d (parseEdgeListDW p)
+readEdgeListW fp d p = parseGraph fp d (parseEdgeListW p)
 
 writeAdjacencyListU :: IO.FilePath -> Graph w -> IO ()
 writeAdjacencyListU fp g = IO.writeFile fp $ ppAdj ppEdgeU g
@@ -210,11 +199,11 @@ writeEdgelistW :: Show w => IO.FilePath -> Graph w -> IO ()
 writeEdgelistW fp g = IO.writeFile fp $ ppEdgeList ppEdgeW g
 
 -- Parsers for reading graph from file
-parseAdjListDU :: Atto.Parser (Graph Int)
-parseAdjListDU = (DGraph . IM.fromList) <$> Atto.many' (parseAdj $ return 1)
+parseAdjListU :: Atto.Parser (Graph Int)
+parseAdjListU = (DGraph . IM.fromList) <$> Atto.many' (parseAdj $ return 1)
 
-parseAdjListDW :: Atto.Parser w -> Atto.Parser (Graph w)
-parseAdjListDW p = (DGraph . IM.fromList) <$> Atto.many' (parseAdj p)
+parseAdjListW :: Atto.Parser w -> Atto.Parser (Graph w)
+parseAdjListW p = (DGraph . IM.fromList) <$> Atto.many' (parseAdj p)
 
 parseAdj :: Atto.Parser w -> Atto.Parser (Int, Nbors w)
 parseAdj p = do
@@ -234,11 +223,11 @@ parseEdge p = do
     let e = edge u v w
     maybe A.empty return e
 
-parseEdgeListDU :: Atto.Parser (Graph Int)
-parseEdgeListDU = fromEdgesD <$> Atto.many' (parseEdge $ return 1)
+parseEdgeListU :: Atto.Parser (Graph Int)
+parseEdgeListU = parseEdgeListW $ return 1
 
-parseEdgeListDW :: Atto.Parser w -> Atto.Parser (Graph w)
-parseEdgeListDW = fmap fromEdgesD . Atto.many' . parseEdge
+parseEdgeListW :: Atto.Parser w -> Atto.Parser (Graph w)
+parseEdgeListW = fmap (fromEdges Directed) . Atto.many' . parseEdge
 
 parseNbor :: Atto.Parser w -> Atto.Parser (Vertex, w)
 parseNbor p = do
