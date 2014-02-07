@@ -38,6 +38,7 @@ module Nets.Graph
     ) where
 
 import qualified Control.Applicative as A
+import qualified Control.Monad.Trans.Maybe as MaT
 import Data.Functor ((<$>))
 import qualified Data.Foldable as F
 import qualified Data.IntMap as IM
@@ -175,11 +176,11 @@ nullU :: Graph w
 nullU = UGraph IM.empty
 
 -- File IO
-readAdjacencyListU :: IO.FilePath -> IO (Maybe (Graph Int))
-readAdjacencyListU = fmap (Atto.maybeResult . Atto.parse parseAdjU) . C8.readFile
+readAdjacencyListU :: IO.FilePath -> MaT.MaybeT IO (Graph Int)
+readAdjacencyListU = MaT.MaybeT . fmap (Atto.maybeResult . Atto.parse parseAdjU) . C8.readFile
 
-readAdjacencyListW :: IO.FilePath -> Atto.Parser w -> IO (Maybe (Graph w))
-readAdjacencyListW fp p = fmap (Atto.maybeResult . Atto.parse (parseAdjW p)) $ C8.readFile fp
+readAdjacencyListW :: IO.FilePath -> Atto.Parser w -> MaT.MaybeT IO (Graph w)
+readAdjacencyListW fp p = MaT.MaybeT $ fmap (Atto.maybeResult . Atto.parse (parseAdjW p)) $ C8.readFile fp
 
 writeAdjacencyListU :: IO.FilePath -> Graph w -> IO ()
 writeAdjacencyListU fp g = IO.writeFile fp $ ppAdj ppEdgeU g

@@ -28,7 +28,8 @@ library
   build-depends:       base >=4.6 && <4.7,
                        containers >=0.5.4.0,
                        attoparsec >=0.11.1.0,
-                       bytestring >=0.10.4.0
+                       bytestring >=0.10.4.0,
+                       transformers >=0.3.0.0
   ghc-options:         -Wall
   hs-source-dirs:      src
   default-language:    Haskell2010
