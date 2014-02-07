@@ -41,3 +41,6 @@ uncons (x:xs) = Just (x, xs)
 
 instance Eq a => Eq (Queue a) where
     (Queue l r) == (Queue l' r') = (l ++ reverse r) == (l' ++ reverse r')
+
+instance Show a => Show (Queue a) where
+    show (Queue l r) = "Queue " ++ show (l ++ reverse r)
