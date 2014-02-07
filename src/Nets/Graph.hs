@@ -278,10 +278,10 @@ ppEdgeList :: (Edge w -> String) -> Graph w -> String
 ppEdgeList f g = unlines $ fmap f $ S.toList $ edges g
 
 ppEdgeU :: Edge w -> String
-ppEdgeU e = show (src e) ++ " " ++ show (dest e)
+ppEdgeU e = show (value $ src e) ++ " " ++ show (value $ dest e)
 
 ppEdgeW :: Show w => Edge w -> String
-ppEdgeW e = show (src e) ++ " " ++ show (dest e) ++ show (weight e)
+ppEdgeW e = show (value $ src e) ++ " " ++ show (value $ dest e) ++ show (weight e)
 
 ppNbor :: (Edge w -> String) -> [Edge w] -> String
 ppNbor f es = unwords $ fmap f es
